@@ -17,8 +17,8 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageReleaseNotes>Web api helpers to ease the setup</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/TheHaleyProject/HaleyHelpers.Web</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/TheHaleyProject/HaleyHelpers.Web</RepositoryUrl>
+    <PackageProjectUrl>$(ProjectBaseUrl)Helpers.Web</PackageProjectUrl>
+    <RepositoryUrl>$(ProjectBaseUrl)Helpers.Web</RepositoryUrl>
     <Description>A tiny tool to quickly setup a webAPI.</Description>
   </PropertyGroup>
 
