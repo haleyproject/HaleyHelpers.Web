@@ -7,7 +7,6 @@ using Haley.Models;
 using Haley.Utils;
 using Microsoft.AspNetCore.DataProtection;
 using System.Text;
-using Azure.Core;
 
 namespace Haley.Utils {
 

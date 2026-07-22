@@ -1,5 +1,4 @@
-﻿using Azure.Core;
-using Haley.Abstractions;
+﻿using Haley.Abstractions;
 using Haley.Enums;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;

@@ -1,5 +1,4 @@
-﻿using Azure.Core;
-using Haley.Models;
+﻿using Haley.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using System.IO.Compression;
