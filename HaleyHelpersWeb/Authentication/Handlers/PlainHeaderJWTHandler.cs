@@ -25,8 +25,19 @@ namespace Haley.Models {
         protected override Func<HttpContext, string, ILogger, Task<PlainAuthResult>>? PrepareClaims => async (c, t, l) => {
             if (string.IsNullOrEmpty(t)) return new PlainAuthResult { Status = false, Message = "Token is null or empty." };
             var jwtOptions = OptionsMonitor.Get(Scheme.Name);
-            var claimsPrincipal = JWTUtil.ValidateToken(t, jwtOptions.ValidationParams, out var validatedToken, Scheme.Name);
-            return new PlainAuthResult() { Status =  claimsPrincipal != null,Principal = claimsPrincipal, Message = "Token validated successfully." };
+            var validationParams = jwtOptions.ValidationParametersResolver is null
+                ? jwtOptions.ValidationParams
+                : await jwtOptions.ValidationParametersResolver(c, t, c.RequestAborted);
+            if (validationParams is null) {
+                return new PlainAuthResult { Status = false, Message = "JWT validation parameters are not configured." };
+            }
+
+            var claimsPrincipal = JWTUtil.ValidateToken(t, validationParams, out var validatedToken, Scheme.Name);
+            return new PlainAuthResult() {
+                Status = claimsPrincipal != null,
+                Principal = claimsPrincipal,
+                Message = claimsPrincipal is null ? "Token validation failed." : "Token validated successfully."
+            };
         };
     }
 }

@@ -44,5 +44,21 @@ namespace Haley.Utils {
             builder.Services.Configure<JwtAuthOptions>(scheme, configureOptions);
             return builder;
         }
+
+        /// <summary>
+        /// Registers a bearer scheme whose validation parameters can be resolved
+        /// asynchronously for each request.
+        /// </summary>
+        public static AuthenticationBuilder AddJwtBearerScheme(
+            this AuthenticationBuilder builder,
+            string scheme,
+            JwtValidationParametersResolver validationParametersResolver,
+            Action<JwtAuthOptions>? configureOptions = null) {
+            if (validationParametersResolver is null) throw new ArgumentNullException(nameof(validationParametersResolver));
+            return builder.AddJwtBearerScheme(scheme, options => {
+                configureOptions?.Invoke(options);
+                options.ValidationParametersResolver = validationParametersResolver;
+            });
+        }
     }
 }
