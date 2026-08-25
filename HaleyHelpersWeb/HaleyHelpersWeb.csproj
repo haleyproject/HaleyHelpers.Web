@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\HaleyProject\HaleyVersion.Props" />
+  <PropertyGroup>
+    <HaleyProject Condition="'$(HaleyProject)' == ''">$(MSBuildProjectDirectory)\..\..</HaleyProject>
+  </PropertyGroup>
+  <Import Project="$(HaleyProject)\HaleyProject\Haley.Source.Props" />
+  <Import Project="$(HaleyProject)\HaleyProject\Haley.Version.Props" />
+  <Import Project="$(HaleyProject)\HaleyProject\Haley.Paths.Props" />
   <PropertyGroup>
     <TargetFrameworks>net8.0</TargetFrameworks>
     <Nullable>enable</Nullable>
@@ -64,12 +69,10 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
   </ItemGroup>
 
-  <Import Project="$(SolutionDir)ProjectReferences_$(SolutionName).txt" Condition="Exists('$(SolutionDir)ProjectReferences_$(SolutionName).txt')" />
-
   <Choose>
-    <When Condition="Exists($(HaleyHelpersDB))">
+    <When Condition="Exists('$(HaleyHelpersDBProj)')">
       <ItemGroup>
-        <ProjectReference Include="$(HaleyHelpersDB)\HaleyHelpersDB.csproj">
+        <ProjectReference Include="$(HaleyHelpersDBProj)">
           <Name>HaleyHelpersDB</Name>
         </ProjectReference>
       </ItemGroup>
