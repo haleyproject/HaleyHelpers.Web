@@ -98,6 +98,11 @@ public sealed class SamlAssertionValidator
             throw new InvalidDataException("The SAML response must contain exactly one direct Assertion.");
         var assertion = assertions[0];
 
+        var statusCode = response.GetElementsByTagName("StatusCode", ProtocolNamespace)
+            .OfType<XmlElement>().FirstOrDefault()?.GetAttribute("Value");
+        if (!string.Equals(statusCode, "urn:oasis:names:tc:SAML:2.0:status:Success", StringComparison.Ordinal))
+            throw new InvalidDataException("The SAML response does not contain a successful status.");
+
         var responseId = RequireUniqueId(document, response);
         var assertionId = RequireUniqueId(document, assertion);
         if (options.ValidateSignature)
@@ -134,18 +139,23 @@ public sealed class SamlAssertionValidator
                 throw new InvalidDataException("The SAML assertion audience is invalid.");
         }
 
-        var confirmations = assertion.GetElementsByTagName("SubjectConfirmationData", AssertionNamespace)
-            .OfType<XmlElement>().ToArray();
-        if (options.ValidateRecipient)
-        {
-            if (confirmations.Length == 0 || !confirmations.Any(item =>
-                    FixedEquals(item.GetAttribute("Recipient"), context.ExpectedDestination)))
-                throw new InvalidDataException("The SAML subject-confirmation recipient is invalid.");
-        }
-        if (options.ValidateInResponseTo && confirmations.Any(item =>
-                !string.IsNullOrWhiteSpace(item.GetAttribute("InResponseTo")) &&
-                !FixedEquals(item.GetAttribute("InResponseTo"), context.ExpectedInResponseTo)))
-            throw new InvalidDataException("The SAML subject confirmation does not match the authentication request.");
+        if (!assertion.ChildNodes.OfType<XmlElement>().Any(element =>
+                element.LocalName == "AuthnStatement" && element.NamespaceURI == AssertionNamespace))
+            throw new InvalidDataException("The SAML assertion does not contain an authentication statement.");
+
+        var subjectElement = assertion.ChildNodes.OfType<XmlElement>().SingleOrDefault(element =>
+            element.LocalName == "Subject" && element.NamespaceURI == AssertionNamespace);
+        var bearerConfirmations = subjectElement?.ChildNodes.OfType<XmlElement>()
+            .Where(element => element.LocalName == "SubjectConfirmation" &&
+                element.NamespaceURI == AssertionNamespace &&
+                string.Equals(element.GetAttribute("Method"),
+                    "urn:oasis:names:tc:SAML:2.0:cm:bearer", StringComparison.Ordinal))
+            .SelectMany(element => element.ChildNodes.OfType<XmlElement>().Where(child =>
+                child.LocalName == "SubjectConfirmationData" && child.NamespaceURI == AssertionNamespace))
+            .ToArray() ?? [];
+        if (bearerConfirmations.Length == 0 || !bearerConfirmations.Any(item =>
+                IsValidBearerConfirmation(item, context, options)))
+            throw new InvalidDataException("The SAML assertion does not contain a valid bearer subject confirmation.");
 
         var subject = assertion.GetElementsByTagName("NameID", AssertionNamespace)
             .OfType<XmlElement>().SingleOrDefault()?.InnerText.Trim();
@@ -226,9 +236,38 @@ public sealed class SamlAssertionValidator
         if (notOnOrAfter is null || now - skew >= notOnOrAfter) throw new InvalidDataException("The SAML assertion has expired.");
     }
 
-    private static DateTimeOffset? ParseInstant(string value) => string.IsNullOrWhiteSpace(value)
-        ? null
-        : DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
+    private static bool IsValidBearerConfirmation(
+        XmlElement data,
+        SamlAssertionValidationContext context,
+        SamlAssertionValidationOptions options)
+    {
+        if (options.ValidateRecipient && !FixedEquals(data.GetAttribute("Recipient"), context.ExpectedDestination))
+            return false;
+        if (options.ValidateInResponseTo && !FixedEquals(data.GetAttribute("InResponseTo"), context.ExpectedInResponseTo))
+            return false;
+        if (!options.ValidateLifetime) return true;
+
+        try
+        {
+            var notBefore = ParseInstant(data.GetAttribute("NotBefore"));
+            var notOnOrAfter = ParseInstant(data.GetAttribute("NotOnOrAfter"));
+            return (notBefore is null || context.EvaluatedAt + options.ClockSkew >= notBefore) &&
+                   notOnOrAfter is not null && context.EvaluatedAt - options.ClockSkew < notOnOrAfter;
+        }
+        catch (InvalidDataException)
+        {
+            return false;
+        }
+    }
+
+    private static DateTimeOffset? ParseInstant(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var instant))
+            return instant;
+        throw new InvalidDataException("The SAML assertion contains an invalid timestamp.");
+    }
 
     private static IReadOnlyCollection<Claim> ExtractClaims(XmlElement assertion, string issuer)
     {
