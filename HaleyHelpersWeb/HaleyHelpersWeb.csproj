@@ -63,6 +63,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Sessions\Database\MariaDB\schema.sql"
+                      LogicalName="Haley.BrowserSessions.Database.MariaDB.schema.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!--<PackageReference Condition="'$(TargetFramework)'=='net6.0'" Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.28" />-->
     <!--<PackageReference Condition="'$(TargetFramework)'=='net8.0'" Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.3" />
     <PackageReference Condition="'$(TargetFramework)'=='net9.0'" Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.2" />-->

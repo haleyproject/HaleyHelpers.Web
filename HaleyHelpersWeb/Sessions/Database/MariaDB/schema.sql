@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS `browser_session` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `scope` varchar(80) NOT NULL,
+  `handle_hash` binary(32) NOT NULL,
+  `session_uid` binary(16) NOT NULL,
+  `subject_uid` binary(16) NOT NULL,
+  `payload` blob NOT NULL COMMENT 'Encrypted refresh credential; format is owned by the consuming application.',
+  `status` varchar(12) NOT NULL DEFAULT 'active',
+  `version` bigint unsigned NOT NULL DEFAULT 1,
+  `lease_uid` binary(16) NULL,
+  `lease_exp` datetime(6) NULL,
+  `created_at` datetime(6) NOT NULL,
+  `accessed_at` datetime(6) NOT NULL,
+  `expires_at` datetime(6) NOT NULL,
+  `revoked_at` datetime(6) NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_browser_session_handle` (`scope`,`handle_hash`),
+  KEY `ix_browser_session_exp` (`scope`,`status`,`expires_at`),
+  KEY `ix_browser_session_subject` (`scope`,`subject_uid`,`status`),
+  KEY `ix_browser_session_session` (`scope`,`session_uid`,`status`)
+) ENGINE=InnoDB AUTO_INCREMENT=1996 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
