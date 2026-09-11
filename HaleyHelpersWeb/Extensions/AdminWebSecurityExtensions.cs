@@ -1,8 +1,6 @@
-using System.Threading.RateLimiting;
 using Haley.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -57,31 +55,8 @@ public static class AdminWebSecurityExtensions
         this IServiceCollection services,
         string policyName,
         int permitLimit,
-        TimeSpan? window = null)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentException.ThrowIfNullOrWhiteSpace(policyName);
-        if (permitLimit < 1) throw new ArgumentOutOfRangeException(nameof(permitLimit));
-        var effectiveWindow = window ?? TimeSpan.FromMinutes(1);
-        if (effectiveWindow <= TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(nameof(window));
-
-        services.AddRateLimiter(options =>
-        {
-            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            options.AddPolicy(policyName, context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        AutoReplenishment = true,
-                        PermitLimit = permitLimit,
-                        QueueLimit = 0,
-                        Window = effectiveWindow
-                    }));
-        });
-        return services;
-    }
+        TimeSpan? window = null) =>
+        services.AddFixedWindowIpRateLimit(policyName, permitLimit, window);
 
     public static IApplicationBuilder UseAdminSecurityHeaders(
         this IApplicationBuilder app,
