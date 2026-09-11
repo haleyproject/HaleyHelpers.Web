@@ -15,27 +15,34 @@ internal sealed class BrowserSessionCleanupHostedService(
     {
         var interval = TimeSpan.FromSeconds(Math.Clamp(options.Value.CleanupSeconds, 60, 86400));
         using var timer = new PeriodicTimer(interval);
-        while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
+        try
         {
-            try
+            while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
             {
-                var removed = await sessions.RemoveExpiredAsync(stoppingToken).ConfigureAwait(false);
-                if (removed > 0)
+                try
                 {
-                    logger.LogInformation(
-                        "Removed {RemovedCount} expired Haley browser-session records for scope {SessionScope}.",
-                        removed,
-                        options.Value.Scope);
+                    var removed = await sessions.RemoveExpiredAsync(stoppingToken).ConfigureAwait(false);
+                    if (removed > 0)
+                    {
+                        logger.LogInformation(
+                            "Removed {RemovedCount} expired Haley browser-session records for scope {SessionScope}.",
+                            removed,
+                            options.Value.Scope);
+                    }
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception exception)
+                {
+                    logger.LogError(exception, "Haley browser-session cleanup failed.");
                 }
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Haley browser-session cleanup failed.");
-            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Normal host shutdown can cancel the timer wait itself.
         }
     }
 }
